@@ -2,6 +2,7 @@
 # to the 2021+ data format. 
 
 import numpy as np 
+import re
 
 
 
@@ -162,6 +163,73 @@ map_weather_conditions_old_to_new = {
     'UNKNOWN': np.nan, 
 }
 
+map_system_code_old_to_new = {
+    'CITY STREET': 'City Street', 
+    'INTERSTATE': 'Interstate Highway', 
+    'COUNTY ROAD': 'County Road', 
+    'FRONTAGE ROAD': 'Frontage Road',
+    'STATE HIGHWAY': 'State Highway', 
+}
+
+
+def convert_4digit_time_to_timestr(time_4digit):
+    add_colons_and_seconds = time_4digit[0:2] + ':' + time_4digit[2:4] + ':00' 
+    return add_colons_and_seconds
+
+def convert_crash_time(df):
+    df['TIME_int_str'] = df['TIME'].fillna(-1).astype(int).astype(str)
+    df['Crash Time'] = df['TIME_int_str'].apply(lambda x: f"{x:04}").apply(convert_4digit_time_to_timestr)
+
+    df = df.drop(['Time_int_str', 'TIME'])
+    return df
+
+def convert_location1_to_rd_number(LOC01):
+    drop_numbers = re.sub(r'\\d+\\s', '', str(LOC01))
+    drop_single_letters = re.sub('\\s[a-z]\\s', '', drop_numbers)
+    split_list = drop_single_letters.split()
+    if len(split_list) == 0:
+        return np.nan
+    else:
+        get_first_word = split_list[0]
+        first_word_first_five_letters_uppercase = get_first_word[0:5].upper()
+        return first_word_first_five_letters_uppercase
+
+def convert_road_number_and_section(df):
+
+    # Populate the road number column (Rd_Number)
+    # ************************************************
+    # set Rd_Number to none since I'm not sure how to do these mappings
+    df.loc[df['System Code'].isin(['City Street', 'County Road']), 'Rd_Number'] = np.nan
+
+    # Rd_Number is the same as the old format RTE (with 3 digits) and the old format SEC
+    # example: I-70 section A would be "070A" 
+    df['RTE_3dig'] = df['RTE'].apply(lambda x: f"{x:03}")
+    df['RTE_3dig_SEC'] = df['RTE_3dig'] + df['SEC']
+
+    condition = df['System Code'].isin(['Interstate Highway', 'State Highway', 'Frontage Road'])
+    df.loc[condition, 'Rd_Number'] = df.loc[condition, 'RTE_3dig_SEC']
+    df = df.drop(['RTE_3dig_SEC']) 
+
+    # Populate the road section column (Rd_Section)
+    # ************************************************
+    # set Rd_Section to part of location 1 for City Street and County Road
+    df['Location 1 converted to Rd_Section'] = df['Location 1'].apply(convert_location1_to_rd_number)
+    condition = df['System Code'].isin(['City Street', 'County Road'])
+    df.loc[condition, 'Rd_Section'] = df.loc[condition, 'Location 1 converted to Rd_Section']
+
+    # Rd_Section is the mile marker (MP) for Highways and Frontage roads
+    condition = df['System Code'].isin(['Interstate Highway', 'State Highway', 'Frontage Road'])
+    df.loc[condition, 'Rd_Section'] = df.loc[condition, 'MP'] 
+
+    df = df.drop(['MP', 'Location 1 converted to Rd_Section']) 
+
+    # Populate the city street (City_Street)
+    # not sure how this mapping works so setting to NaN 
+    df['City_Street'] = np.nan 
+
+    return df
+    
+
 
 def convert_old_cdot_format_to_new_format(df):
 
@@ -203,9 +271,10 @@ def convert_old_cdot_format_to_new_format(df):
                  'CONDITION': 'Road Condition',
                  'LIGHTING': 'Lighting Condition',
                  'WEATHER': 'Weather Condition',
+                 'VEHICLES': 'Total Vehicles',
+                 'SYSTEM': 'System Code',
                  }
     )
-
 
     # Map string values from old to new format 
     df['Location'] = df['Location'].map(map_lighting_conditions_old_to_new)
@@ -220,23 +289,39 @@ def convert_old_cdot_format_to_new_format(df):
     df['Road Condition'] = df['Road Condition'].map(map_road_condition_old_to_new)
     df['Lighting Condition'] = df['Lighting Conditions'].map(map_lighting_conditions_old_to_new)
     df['Weather Condition'] = df['Weather Condition'].map(map_weather_conditions_old_to_new)
+    df['System Code'] = df['System Code'].map(map_system_code_old_to_new)
 
-    # write utility functions for the following 
+    # Cast 'Total Vehicles' to float 
+    df['Total Vehicles'] = df['Total Vehicles'].astype(float)
 
-        # Approach Overtaking Turn 
+    # Create 'Number Killed' and 'Number Injured' columns 
+    df['Number Killed'] = df['Injury 04']
+    df['Number Injured'] = df['Injury 01'] + df['Injury 02'] + df['Injury 03']
 
-        # Number Killed 
-        # Number Injured 
-        # use new names 
+    # Approach Overtaking Turn 
+    # get info from Crash Type
+    df['Approach Overtaking Turn'] = df['Crash Type'] 
+    df.loc[~cdot_old_converted_pdf['Approach Overtaking Turn'].isin(['Approach Turn', 'Overtaking Turn'])] = 'Not Applicable'
 
-        # Total Vehicles 
+    # Crash Time 
+    df = convert_crash_time(df)
 
-        # System Code, Rd_Number, Rd_Section, City_Street
-        # call function 
-
-        # Crash Time
+    # Rd_Number, Rd_Section, City_Street
+    df = convert_road_number_and_section(df)
 
     # Drop no longer needed columns 
-    df.drop(['COUNTOUR'])
+    df.drop([
+        'COUNTOUR', 
+        'HAZMAT_1', 
+        'HAZMAT_2', 
+        'HAZMAT_3', 
+        'VIOLCODE_1', 
+        'VIOLCODE_2', 
+        'VIOLCODE_3',
+        'STATE_1', 
+        'STATE_2',
+        'STATE_3',
+        'RAMP',
+    ])
 
     return df 
