@@ -223,6 +223,7 @@ def convert_road_number_and_section(df):
 
     condition = df['System Code'].isin(['Interstate Highway', 'State Highway', 'Frontage Road'])
     df.loc[condition, 'Rd_Number'] = df.loc[condition, 'RTE_3dig_SEC']
+    df = df.drop(['RTE_3dig_SEC'], axis=1) 
 
     # Populate the road section column (Rd_Section)
     # ************************************************
@@ -235,7 +236,7 @@ def convert_road_number_and_section(df):
     condition = df['System Code'].isin(['Interstate Highway', 'State Highway', 'Frontage Road'])
     df.loc[condition, 'Rd_Section'] = df.loc[condition, 'MP'] 
 
-    df = df.drop(['MP', 'Location 1 converted to Rd_Section']) 
+    df = df.drop(['MP', 'Location 1 converted to Rd_Section'], axis=1) 
 
     # Populate the city street (City_Street)
     # not sure how this mapping works so setting to NaN 
