@@ -178,12 +178,17 @@ def convert_4digit_time_to_timestr(time_4digit):
     return add_colons_and_seconds
 
 def convert_crash_time(df):
+    #  convert handle nan values for manipulation
+    df.loc[df['TIME'] == 'Not Applicable'] = np.nan
+    df['TIME'] = df['TIME'].fillna(-1)
     # convert float time 2359.12 to a string '2359' which removes seconds information which is okay
-    df['TIME_int_str'] = df['TIME'].fillna(-1).astype(int).astype(str)
+    df['TIME_int_str'] = df['TIME'].astype(int).astype(str)
     # convert the string time '2359' to string '23:59:00' 
     df['Crash Time'] = df['TIME_int_str'].apply(lambda x: f"{x:04}").apply(convert_4digit_time_to_timestr)
+    # add back in nans
+    df.loc[df['Crash Time'].str.contains('-1')] = np.nan
 
-    df = df.drop(['Time_int_str', 'TIME'])
+    df = df.drop(['TIME'], axis=1)
     return df
 
 def convert_location1_to_rd_number(LOC01):
@@ -218,7 +223,6 @@ def convert_road_number_and_section(df):
 
     condition = df['System Code'].isin(['Interstate Highway', 'State Highway', 'Frontage Road'])
     df.loc[condition, 'Rd_Number'] = df.loc[condition, 'RTE_3dig_SEC']
-    df = df.drop(['RTE_3dig_SEC']) 
 
     # Populate the road section column (Rd_Section)
     # ************************************************
@@ -332,6 +336,6 @@ def convert_old_cdot_format_to_new_format(df):
         'STATE_2',
         'STATE_3',
         'RAMP',
-    ])
+    ], axis=1)
 
     return df 
