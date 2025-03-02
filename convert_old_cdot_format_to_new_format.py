@@ -173,19 +173,29 @@ map_system_code_old_to_new = {
 
 
 def convert_4digit_time_to_timestr(time_4digit):
+    # convert the time format of '2359' to '23:59:00' 
     add_colons_and_seconds = time_4digit[0:2] + ':' + time_4digit[2:4] + ':00' 
     return add_colons_and_seconds
 
 def convert_crash_time(df):
+    # convert float time 2359.12 to a string '2359' which removes seconds information which is okay
     df['TIME_int_str'] = df['TIME'].fillna(-1).astype(int).astype(str)
+    # convert the string time '2359' to string '23:59:00' 
     df['Crash Time'] = df['TIME_int_str'].apply(lambda x: f"{x:04}").apply(convert_4digit_time_to_timestr)
 
     df = df.drop(['Time_int_str', 'TIME'])
     return df
 
 def convert_location1_to_rd_number(LOC01):
+    # convert Location 1 column to be formatted as expected for the Rd_Number column 
+
+    # drop isolated numbers 
+    # 1250 water st --> water st, but 23rd st stays the same
     drop_numbers = re.sub(r'\\d+\\s', '', str(LOC01))
+    # drop single letters 
+    # S main st --> main st 
     drop_single_letters = re.sub('\\s[a-z]\\s', '', drop_numbers)
+    # split the remaining string and get the first 5 characters 
     split_list = drop_single_letters.split()
     if len(split_list) == 0:
         return np.nan
@@ -269,7 +279,7 @@ def convert_old_cdot_format_to_new_format(df):
                  'EVENT_3': 'Third HE', 
                  'ACCTYPE': 'Crash Type',
                  'CONDITION': 'Road Condition',
-                 'LIGHTING': 'Lighting Condition',
+                 'LIGHTING': 'Lighting Conditions',
                  'WEATHER': 'Weather Condition',
                  'VEHICLES': 'Total Vehicles',
                  'SYSTEM': 'System Code',
@@ -285,9 +295,9 @@ def convert_old_cdot_format_to_new_format(df):
     df['MHE'] = df['MHE'].map(map_harmful_event_old_to_new)
     df['Crash Type'] = df['Crash Type'].map(map_accident_type_old_to_new)
     df['Road Contour Curves'] = df['CONTOUR'].map(map_road_contour_curves_old_to_new)
-    df['Road Contour Grade'] = df['COUNTOUR'].map(map_road_contour_grade_old_to_new)
+    df['Road Contour Grade'] = df['CONTOUR'].map(map_road_contour_grade_old_to_new)
     df['Road Condition'] = df['Road Condition'].map(map_road_condition_old_to_new)
-    df['Lighting Condition'] = df['Lighting Conditions'].map(map_lighting_conditions_old_to_new)
+    df['Lighting Conditions'] = df['Lighting Conditions'].map(map_lighting_conditions_old_to_new)
     df['Weather Condition'] = df['Weather Condition'].map(map_weather_conditions_old_to_new)
     df['System Code'] = df['System Code'].map(map_system_code_old_to_new)
 
@@ -301,7 +311,7 @@ def convert_old_cdot_format_to_new_format(df):
     # Approach Overtaking Turn 
     # get info from Crash Type
     df['Approach Overtaking Turn'] = df['Crash Type'] 
-    df.loc[~cdot_old_converted_pdf['Approach Overtaking Turn'].isin(['Approach Turn', 'Overtaking Turn'])] = 'Not Applicable'
+    df.loc[~df['Approach Overtaking Turn'].isin(['Approach Turn', 'Overtaking Turn'])] = 'Not Applicable'
 
     # Crash Time 
     df = convert_crash_time(df)
@@ -311,7 +321,7 @@ def convert_old_cdot_format_to_new_format(df):
 
     # Drop no longer needed columns 
     df.drop([
-        'COUNTOUR', 
+        'CONTOUR', 
         'HAZMAT_1', 
         'HAZMAT_2', 
         'HAZMAT_3', 
