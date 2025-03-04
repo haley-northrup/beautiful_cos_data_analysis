@@ -4,6 +4,8 @@
 import numpy as np 
 import re
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 # Column Mapping Dictionaries 
@@ -223,7 +225,7 @@ def convert_road_number_and_section(df):
 
     condition = df['System Code'].isin(['Interstate Highway', 'State Highway', 'Frontage Road'])
     df.loc[condition, 'Rd_Number'] = df.loc[condition, 'RTE_3dig_SEC']
-    df = df.drop(['RTE_3dig_SEC'], axis=1) 
+    df = df.drop(['RTE_3dig', 'RTE_3dig_SEC', 'RTE', 'SEC'], axis=1) 
 
     # Populate the road section column (Rd_Section)
     # ************************************************
@@ -234,7 +236,7 @@ def convert_road_number_and_section(df):
 
     # Rd_Section is the mile marker (MP) for Highways and Frontage roads
     condition = df['System Code'].isin(['Interstate Highway', 'State Highway', 'Frontage Road'])
-    df.loc[condition, 'Rd_Section'] = df.loc[condition, 'MP'] 
+    df.loc[condition, 'Rd_Section'] = df.loc[condition, 'MP'].astype(str)
 
     df = df.drop(['MP', 'Location 1 converted to Rd_Section'], axis=1) 
 
@@ -260,6 +262,8 @@ def convert_old_cdot_format_to_new_format(df):
     df['Processing Status'] = np.nan
     df['Last Updated'] = np.nan
 
+    
+
     # Rename Columns 
     df = df.rename(
         columns={'DATE': 'Crash Date', 
@@ -270,8 +274,7 @@ def convert_old_cdot_format_to_new_format(df):
                  'LONGITUDE': 'Longitude',
                  'LOC_01': 'Location 1', 
                  'LINK': 'Link', 
-                 'LOC_02': 'Location 2', 
-                 'WAN_TYPE': 'Wild Animal', 
+                 'LOC_02': 'Location 2',  
                  'INJURY 00': 'Injury 00', 
                  'INJURY 01': 'Injury 01', 
                  'INJURY 02': 'Injury 02', 
@@ -290,9 +293,11 @@ def convert_old_cdot_format_to_new_format(df):
                  'SYSTEM': 'System Code',
                  }
     )
+    # rename manually wasn't working in the dictionary above
+    df['Wild Animal'] = df['WAN_TYPE']
 
     # Map string values from old to new format 
-    df['Location'] = df['Location'].map(map_lighting_conditions_old_to_new)
+    df['Location'] = df['Location'].map(map_location_old_to_new)
     df['Road Description'] = df['Road Description'].map(map_road_desc_old_to_new)
     df['First HE'] = df['First HE'].map(map_harmful_event_old_to_new)
     df['Second HE'] = df['Second HE'].map(map_harmful_event_old_to_new)
@@ -315,8 +320,10 @@ def convert_old_cdot_format_to_new_format(df):
 
     # Approach Overtaking Turn 
     # get info from Crash Type
-    df['Approach Overtaking Turn'] = df['Crash Type'] 
-    df.loc[~df['Approach Overtaking Turn'].isin(['Approach Turn', 'Overtaking Turn'])] = 'Not Applicable'
+    df['Approach Overtaking Turn'] = np.nan
+    df.loc[df['Crash Type'] == 'Approach Turn', 'Approach Overtaking Turn'] = 'Approach Turn'
+    df.loc[df['Crash Type'] == 'Overtaking Turn', 'Approach Overtaking Turn'] = 'Overtaking Turn'
+    df.loc[~df['Approach Overtaking Turn'].isin(['Approach Turn', 'Overtaking Turn']), 'Approach Overtaking Turn'] = 'Not Applicable'
 
     # Crash Time 
     df = convert_crash_time(df)
@@ -325,7 +332,7 @@ def convert_old_cdot_format_to_new_format(df):
     df = convert_road_number_and_section(df)
 
     # Drop no longer needed columns 
-    df.drop([
+    df = df.drop([
         'CONTOUR', 
         'HAZMAT_1', 
         'HAZMAT_2', 
@@ -337,6 +344,7 @@ def convert_old_cdot_format_to_new_format(df):
         'STATE_2',
         'STATE_3',
         'RAMP',
+        'WAN_TYPE',
     ], axis=1)
 
     return df 
