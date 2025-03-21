@@ -173,6 +173,65 @@ map_system_code_old_to_new = {
     'STATE HIGHWAY': 'State Highway', 
 }
 
+map_helmet_x_old_to_new = {
+    'NONE': 'No Helmet',
+    'EYE PROTECTION ONLY': 'old__eye_protection_only',
+    'BICYCLE HELMET (BICYCLE ONLY)': 'old__bicycle_helmet_bicycle_only',
+    'HELMET AND EYE PROTECTION': 'old__helmet_and_eye_protection',
+    'HELMET ONLY': 'old__helmet_only',
+}
+
+map_belt_x = {
+    'Y': 'old__yes',
+    'N': 'old__no',
+}
+
+map_human_factor_x_old_to_new = {
+    'NO APPARENT CONTRIBUTING FACTOR': 'No Apparent Contributing Factor',
+    'UNKNOWN': np.nan,
+    'DRIVER UNFAMILIAR WITH AREA': 'Driver Unfamiliar With Area',
+    'DRIVER PREOCCUPIED':'Distracted',
+    'DRIVER INEXPERIENCE': 'Driver Inexperience',
+    'DRIVER FATIGUE': 'Asleep or Fatigued',
+    'ASLEEP AT WHEEL': 'Asleep at the wheel',
+    'ILLNESS': 'Illness',
+    'DRIVER EMOTIONALLY UPSET': 'Driver Emotionally Upset',
+    'DISTRACTED BY PASSENGER': 'Distracted/Other Occupant',
+    'EVADING LAW ENFORCEMENT OFFICER': 'Evading Law Enforcement Officer',
+    'PHYSICAL DISABILITY': 'Physical Disability',
+}
+
+map_movement_x_old_to_new = {
+    'BACKING': 'Backing',
+    'OTHER': 'Other (Describe in Narrative)',
+    'AVOIDING OBJECT/VEHICLE IN ROAD': 'Swerve/Avoidance',
+    'CHANGING LANES': 'Changing Lanes',
+    'GOING STRAIGHT': 'Going Straight',
+    'ENTERING/LEAVING PARKED POSITION': 'Entering/Leaving Parked Position',
+    'PASSING': 'Passing',
+    'MAKING LEFT TURN': 'Making Left Turn',
+    'SLOWING': 'Slowing',
+    'WEAVING': 'Weaving',
+    'MAKING U-TURN': 'Making U-Turn',
+    'MAKING RIGHT TURN': 'Making Right Turn',
+    'PARKED': 'Parked',
+    'STOPPED IN TRAFFIC': 'Stopped in Traffic',
+    'WRONG WAY': 'Traveled Wrong Way',
+    'UNKNOWN': np.nan,
+}
+
+map_direction_x = {
+    'S': 'South', 
+    'N': 'North',
+    'W': 'West',
+    'UK': 'Unknown',
+    'E': 'East',
+    'SE': 'Southeast',
+    'NW': 'Northwest',
+    'NE': 'Northeast',
+    'SW': 'Southwest',
+}
+
 
 def convert_4digit_time_to_timestr(time_4digit):
     # convert the time format of '2359' to '23:59:00' 
@@ -251,6 +310,7 @@ def convert_road_number_and_section(df):
 def convert_old_cdot_format_to_new_format(df):
 
     # Create columns that have no equivalent in old format 
+    # some column names have spaces at the end 
     df['CUID'] = np.nan
     df['Fourth HE'] = np.nan
     df['Secondary Crash'] = np.nan
@@ -261,9 +321,25 @@ def convert_old_cdot_format_to_new_format(df):
     df['Record Status'] = np.nan 
     df['Processing Status'] = np.nan
     df['Last Updated'] = np.nan
-
+    df['TU-1 Special Function'] = np.nan
+    df['TU-2 Special Function'] = np.nan
+    df['TU-1 Autonomous Vehicle'] = np.nan 
+    df['TU-2 Autonomous Vehicle'] = np.nan
+    df['TU-1 Hit And Run'] = np.nan
+    df['TU-2 Hit And Run'] = np.nan
+    df['TU-1 Speed'] = np.nan
+    df['TU-2 Speed'] = np.nan
+    df['TU-1 Driver Action'] = np.nan
+    df['TU-2 Driver Action'] = np.nan
+    df['TU-1 Safety System Available '] = np.nan
+    df['TU-2 Safety System Available '] = np.nan
+    df['TU-1 NM Facility Available'] = np.nan
+    df['TU-2 NM Facility Available'] = np.nan
+    df['TU-1 NM Location '] = np.nan
+    df['TU-2 NM Location '] = np.nan
+    df['TU-2 NM Action '] = np.nan
+    df['TU-2 NM Action '] = np.nan
     
-
     # Rename Columns 
     df = df.rename(
         columns={'DATE': 'Crash Date', 
@@ -345,6 +421,13 @@ def convert_old_cdot_format_to_new_format(df):
         'STATE_3',
         'RAMP',
         'WAN_TYPE',
+        'DUI_1', 
+        'DUI_2', 
+        'DUI_3',
+        'SEVERITY',
+        'DRVINJ_1', 
+        'DRVINJ_2', 
+        'DRVINJ_3',
     ], axis=1)
 
     return df 
