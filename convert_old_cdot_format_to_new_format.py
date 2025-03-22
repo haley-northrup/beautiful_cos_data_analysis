@@ -323,22 +323,31 @@ def convert_old_cdot_format_to_new_format(df):
     df['Last Updated'] = np.nan
     df['TU-1 Special Function'] = np.nan
     df['TU-2 Special Function'] = np.nan
+    df['TU-3 Special Function'] = np.nan
     df['TU-1 Autonomous Vehicle'] = np.nan 
     df['TU-2 Autonomous Vehicle'] = np.nan
+    df['TU-3 Autonomous Vehicle'] = np.nan
     df['TU-1 Hit And Run'] = np.nan
     df['TU-2 Hit And Run'] = np.nan
+    df['TU-3 Hit And Run'] = np.nan
     df['TU-1 Speed'] = np.nan
     df['TU-2 Speed'] = np.nan
+    df['TU-3 Speed'] = np.nan
     df['TU-1 Driver Action'] = np.nan
     df['TU-2 Driver Action'] = np.nan
+    df['TU-3 Driver Action'] = np.nan
     df['TU-1 Safety System Available '] = np.nan
     df['TU-2 Safety System Available '] = np.nan
+    df['TU-3 Safety System Available '] = np.nan
     df['TU-1 NM Facility Available'] = np.nan
     df['TU-2 NM Facility Available'] = np.nan
+    df['TU-3 NM Facility Available'] = np.nan
     df['TU-1 NM Location '] = np.nan
     df['TU-2 NM Location '] = np.nan
+    df['TU-3 NM Location '] = np.nan
     df['TU-2 NM Action '] = np.nan
     df['TU-2 NM Action '] = np.nan
+    df['TU-3 NM Action '] = np.nan 
     
     # Rename Columns 
     df = df.rename(
