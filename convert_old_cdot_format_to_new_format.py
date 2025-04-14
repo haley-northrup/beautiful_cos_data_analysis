@@ -311,43 +311,44 @@ def convert_old_cdot_format_to_new_format(df):
 
     # Create columns that have no equivalent in old format 
     # some column names have spaces at the end 
-    df['CUID'] = np.nan
-    df['Fourth HE'] = np.nan
-    df['Secondary Crash'] = np.nan
-    df['Construction Zone'] = np.nan
-    df['School Zone'] = np.nan
-    df['Weather Condition 2'] = np.nan 
-    df['Lane Position'] = np.nan 
-    df['Record Status'] = np.nan 
-    df['Processing Status'] = np.nan
-    df['Last Updated'] = np.nan
-    df['TU-1 Special Function'] = np.nan
-    df['TU-2 Special Function'] = np.nan
-    df['TU-3 Special Function'] = np.nan
-    df['TU-1 Autonomous Vehicle'] = np.nan 
-    df['TU-2 Autonomous Vehicle'] = np.nan
-    df['TU-3 Autonomous Vehicle'] = np.nan
-    df['TU-1 Hit And Run'] = np.nan
-    df['TU-2 Hit And Run'] = np.nan
-    df['TU-3 Hit And Run'] = np.nan
-    df['TU-1 Speed'] = np.nan
-    df['TU-2 Speed'] = np.nan
-    df['TU-3 Speed'] = np.nan
-    df['TU-1 Driver Action'] = np.nan
-    df['TU-2 Driver Action'] = np.nan
-    df['TU-3 Driver Action'] = np.nan
-    df['TU-1 Safety System Available '] = np.nan
-    df['TU-2 Safety System Available '] = np.nan
-    df['TU-3 Safety System Available '] = np.nan
-    df['TU-1 NM Facility Available'] = np.nan
-    df['TU-2 NM Facility Available'] = np.nan
-    df['TU-3 NM Facility Available'] = np.nan
-    df['TU-1 NM Location '] = np.nan
-    df['TU-2 NM Location '] = np.nan
-    df['TU-3 NM Location '] = np.nan
-    df['TU-2 NM Action '] = np.nan
-    df['TU-2 NM Action '] = np.nan
-    df['TU-3 NM Action '] = np.nan 
+    nan_columns = [
+        'CUID', 
+        'Fourth HE', 
+        'Secondary Crash', 
+        'Construction Zone', 
+        'School Zone', 
+        'Weather Condition 2',
+        'Lane Position',
+        'Record Status',
+        'Processing Status', 
+        'Last Updated', 
+        'TU-1 Special Function',
+        'TU-2 Special Function', 
+        'TU-3 Special Function',
+        'TU-1 Autonomous Vehicle', 
+        'TU-2 Autonomous Vehicle', 
+        'TU-3 Autnomous Vehicle',
+        'TU-1 Speed',
+        'TU-2 Speed', 
+        'TU-3 Speed', 
+        'TU-1 Driver Action', 
+        'TU-2 Driver Action', 
+        'TU-3 Driver Action', 
+        'TU-1 Safety System Available ', 
+        'TU-2 Safety System Available ', 
+        'TU-3 Safety System Avaliable ', 
+        'TU-1 NM Facility Available', 
+        'TU-2 NM Facility Available',
+        'TU-3 NM Facility Available',
+        'TU-1 NM Location ', 
+        'TU-2 NM Location ', 
+        'TU-3 NM Location ',
+        'TU-2 NM Action ',
+        'TU-2 NM Action ',
+        'TU-3 NM Action ',
+    ]
+    for nc in nan_columns:
+        df[nc] = np.nan
     
     # Rename Columns 
     df = df.rename(
