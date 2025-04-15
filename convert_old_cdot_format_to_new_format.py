@@ -351,7 +351,7 @@ def determine_motorists_vs_non_motorists(df):
             # TU-1 Type = Null 
             # TU-2 Type = SUV
             # TU-1 NM = Pedestrian
-        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Type"] = cdot_old_pdf[f"VEHICLE_{x}"].map(map_vehicle_to_tu_type_x)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Type"] = df[f"VEHICLE_{x}"].map(map_vehicle_to_tu_type_x)
 
     return df
 
@@ -389,7 +389,7 @@ def convert_tu_metadata(df):
             f"TU-{x} NM Other Drugs Suspected ",
         ] 
         for col_name in people_columns:
-            cdot_old_pdf[col_name] = ''
+            df[col_name] = ''
 
         # direction
         df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Direction"] = df[f"DIR_{x}"].map(map_direction_x)
@@ -427,7 +427,7 @@ def convert_tu_metadata(df):
         df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Sex "] = df[f"SEX_{x}"]
 
         # Safety restraint use (only for motorists)
-        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Safety restraint Use"] = cdot_odfld_pdf[f"BELT_{x}"].map(map_belt_x)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Safety restraint Use"] = df[f"BELT_{x}"].map(map_belt_x)
 
         # safety helmet
         df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Safety Helmet "] = df[f"CYCPROT_{x}"].map(map_helmet_x)
@@ -634,6 +634,9 @@ def convert_old_cdot_format_to_new_format(df):
         'DRVINJ_1', 
         'DRVINJ_2', 
         'DRVINJ_3',
+        'vehicle_1_is_nm', 
+        'vehicle_2_is_nm', 
+        'vehicle_3_is_nm',
     ], axis=1)
 
     return df 
