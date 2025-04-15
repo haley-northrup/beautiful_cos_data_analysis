@@ -232,6 +232,23 @@ map_direction_x = {
     'SW': 'Southwest',
 }
 
+map_vehicle_to_tu_type_x = {'HIT & RUN - UNKNOWN': 'Unknown', 
+                 'UNKNOWN': 'Unknown',
+                 'PICKUP TRUCK/UTILITY VAN': 'Pickup Truck/Utility Van', 
+                 'PASSENGER CAR/VAN': 'Passenger Car/Passenger Van', 
+                 'SUV': 'SUV', 
+                 'MOTORCYCLE': 'Motorcycle', 
+                 'PASSENGER CAR/VAN W/TRAILER': 'Passenger Car/Passenger Van with Trailer - RET',
+                 'SCHOOL BUS < 15 PEOPLE': 'School Bus (all school buses)',
+                 'FARM EQUIPMENT': 'Farm Equipment',
+                 'MOTOR HOME': 'Motor Home',
+                 'TRUCK GVW > 10K/BUSSES > 15 PEOPLE': 'old__truck_gvw_gr_10k_busses_gr_15_people',
+                 'SUV W/TRAILER': 'old__SUV_w_trailer',
+                 'PICKUP TRUCK/UTILITY VAN W/TRAILER': 'old__pickup_truck_utility_van_w_trailer',
+                 'NON-SCHOOL BUS < 15 PEOPLE': '',
+                 'OTHER - SEE REPORT': 'Other Vehicle Type (Describe in Narrative)',
+                }
+
 
 def convert_4digit_time_to_timestr(time_4digit):
     # convert the time format of '2359' to '23:59:00' 
@@ -304,7 +321,180 @@ def convert_road_number_and_section(df):
     df['City_Street'] = np.nan 
 
     return df
-    
+
+def determine_motorists_vs_non_motorists(df):
+    # Determine for each traffic unit (i.e. VEHICLE_X) whether they are a motorist or non-motorist
+    # Identify which VEHICLE_X columns need to be converted to NM columns in new format 
+
+    for x in [1, 2, 3]:
+        # initialize columns
+        df[f"TU-{x} Type"] = ''
+        df[f"TU-{x} NM Type"] = ''
+        df[f"vehicle_{x}_is_nm"] = False
+
+        # When the accident type is Pedestrian the vast majority of the time the "VEHICLE_X" column that says "OTHER - SEE REPORT" is referring to a pedestrian 
+        # there are a handful of accidents that have multiple "VEHICLE_X" columns that say "OTHER - SEE REPORT" so it is ambiguous which X is the pedestrian 
+        df.loc[(df['ACCTYPE'] == 'PEDESTRIAN') & (df[f"VEHICLE_{x}"] == 'OTHER - SEE REPORT'), f"vehicle_{x}_is_nm"] = True 
+        df.loc[(df['ACCTYPE'] == 'PEDESTRIAN') & (df[f"VEHICLE_{x}"] == 'OTHER - SEE REPORT'), f"TU-{x} NM Type"] = 'Pedestrian'
+
+        # Old format has Bicycle as a type of vehicle, so filter for VEHICLE_X == BICYCLE or MOTORIZED BICYCLE, then slot those in as non-motorists 
+        # accident type isn't always bicycle when a bicycle is involved 
+        df.loc[(df[f"VEHICLE_{x}"] == 'BICYCLE') | (df[f"VEHICLE_{x}"] == 'MOTORIZED BICYCLE'), f"vehicle_{x}_is_nm"] = True
+        df.loc[df[f"VEHICLE_{x}"] == 'BICYCLE', f"TU-{x} NM Type"] = 'Bicyclist'
+        df.loc[df[f"VEHICLE_{x}"] == 'MOTORIZED BICYCLE', f"TU-{x} NM Type"] = 'Other Bicyclist/Cyclist'
+
+        # Convert VEHICLE_X to TU-X Type - when VEHICLE_X is a motorist 
+        # don't map bicycle or motorized bicycle since they will always be mapped to non-motorists 
+
+        # In the new data format, if the accident is between a motorist and a non-motorist
+        # there is no re-use of the 1, 2 numbers 
+            # TU-1 Type = Null 
+            # TU-2 Type = SUV
+            # TU-1 NM = Pedestrian
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Type"] = cdot_old_pdf[f"VEHICLE_{x}"].map(map_vehicle_to_tu_type_x)
+
+    return df
+
+
+def convert_tu_metadata(df):
+    # Based on motorist or non-motorist for each traffic unit, convert 
+    # direction, movement, hit and run, speed limit, estimated speed, human contributing factor
+    # age, sex, safety restraint use, safety helpmet, alcohol suspected, marijuana suspected, 
+    # and other drugs suspected 
+    # Initialize all NM and Motorist columns to empty strings 
+    # add a third vehicle and non-motorist to map VEHICLE_3 to from old format 
+
+    for x in ['1', '2', '3']:
+        people_columns = [
+            f"TU-{x} Direction",
+            f"TU-{x} Movement",
+            f"TU-{x} Speed Limit",
+            f"TU-{x} Estimated Speed",
+            f"TU-{x} Human Contributing Factor",
+            f"TU-{x} Age",
+            f"TU-{x} Sex ",
+            f"TU-{x} Safety restraint Use",
+            f"TU-{x}1 Safety Helmet",
+            f"TU-{x} Alcohol Suspected",
+            f"TU-{x}  Marijuana Suspected",
+            f"TU-{x} Other Drugs Suspected ",
+            f"TU-{x} NM Direction",
+            f"TU-{x} NM Movement",
+            f"TU-{x} NM Age ",
+            f"TU-{x} NM Sex ",
+            f"TU-{x} NM Human Contributing Factor ",
+            f"TU-{x} NM Safety Helmet ",
+            f"TU-{x} NM Alcohol Suspected "",
+            f"TU-{x} NM Marijuana Suspected ",
+            f"TU-{x} NM Other Drugs Suspected ",
+        ] 
+        for col_name in people_columns:
+            cdot_old_pdf[col_name] = ''
+
+        # direction
+        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Direction"] = df[f"DIR_{x}"].map(map_direction_x)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Direction"] = df[f"DIR_{x}"].map(map_direction_x)
+
+        # movement
+        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Movement"] = df[f"VEH_MOVE_{x}"].map(map_movement_x)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Movement"] = df[f"VEH_MOVE_{x}"].map(map_movement_x)
+
+        # hit and run (only for motorists)
+        condition_hit_and_run__true = (df[f"vehicle_{x}_is_nm"] == False) & (df[f"VEHICLE_{x}"] == "HIT & RUN - UNKNOWN")
+        condition_hit_and_run__false = (df[f"vehicle_{x}_is_nm"] == False) & (df[f"VEHICLE_{x}"] != "HIT & RUN - UNKNOWN")
+        df.loc[condition_hit_and_run__true, f"TU-{x} Hit And Run"] = True
+        df.loc[condition_hit_and_run__false, f"TU-{x} Hit And Run"] = False
+
+        # speed limit (only for motorists)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Speed Limit"] = df[f"LIMIT{x}"].replace('UK', '-1').astype(int).replace(-1, np.nan)
+
+        # estimated speed (only for motorists)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Estimated Speed"] = df[f"SPEED_{x}"] \
+                                        .replace('UK', '-1') \
+                                        .replace(np.nan, '-1').str.replace(r'^0+(?!\s*$)', '', regex=True) \
+                                        .astype('int').replace(-1, np.nan)
+
+        # human contributing factor
+        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Human Contributing Factor "] = df[f"FACTOR_{x}"].map(map_factor_x)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Human Contributing Factor"] = df[f"FACTOR_{x}"].map(map_factor_x)
+
+        # Age
+        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Age "] = df[f"AGE_{x}"]
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Age"] = df[f"AGE_{x}"]
+
+        # Sex
+        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Sex "] = df[f"SEX_{x}"]
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Sex "] = df[f"SEX_{x}"]
+
+        # Safety restraint use (only for motorists)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Safety restraint Use"] = cdot_odfld_pdf[f"BELT_{x}"].map(map_belt_x)
+
+        # safety helmet
+        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Safety Helmet "] = df[f"CYCPROT_{x}"].map(map_helmet_x)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Safety Helmet"] = df[f"CYCPROT_{x}"].map(map_helmet_x)
+
+        # Alcohol, Marijuana, Other Drugs
+        # *********************************************************************
+        condition_motorist = df[f"vehicle_{x}_is_nm"] == False
+        condition_non_motorist = df[f"vehicle_{x}_is_nm"] == True
+        condition_no_impairment = df[f"DRIVER_{x}"] == 'NO IMPAIRMENT SUSPECTED'
+        condition_alcohol_involved = df[f"DRIVER_{x}"] == 'ALCOHOL INVOLVED'
+        condition_alcohol_drugs = df[f"DRIVER_{x}"] == 'ALCOHOL/DRUGS'
+        condition_rx_med_drugs = df[f"DRIVER_{x}"] == 'RX/MEDICATION/DRUGS'
+
+        # No Impairment 
+        # OLD: NO IMPAIRMENT SUSPECTED 
+        # --> NEW Alcohol Suspected - "No" 
+        # --> NEW Marijuana Suspected - "Marijuana Not Suspected"
+        # --> NEW Other Drugs Suspected - "No" 
+        df.loc[condition_non_motorist & condition_no_impairment, f"TU-{x} NM Alcohol Suspected "] = "No"
+        df.loc[condition_non_motorist & condition_no_impairment, f"TU-{x} NM Marijuana Suspected "] = 'Marijuana Not Suspected'
+        df.loc[condition_non_motorist & condition_no_impairment, f"TU-{x} NM Other Drugs Suspected "] = "No"
+
+        df.loc[condition_motorist & condition_no_impairment, f"TU-{x} Alcohol Suspected"] = "No"
+        df.loc[condition_motorist & condition_no_impairment, f"TU-{x}  Marijuana Suspected"] = 'Marijuana Not Suspected'
+        df.loc[condition_motorist & condition_no_impairment, f"TU-{x} Other Drugs Suspected "] = "No"
+
+        # Alcohol Involved 
+        # OLD: ALCOHOL INVOLVED 
+        # --> New Alcohol Suspected - "Yes" 
+        # --> NEW Marijuana Suspected - "Unknown"
+        # --> NEW Other Drugs Suspected - "Unknown" 
+        df.loc[condition_non_motorist & condition_alcohol_involved, f"TU-{x} NM Alcohol Suspected "] = "Yes"
+        df.loc[condition_non_motorist & condition_alcohol_involved, f"TU-{x} NM Marijuana Suspected "] = 'Unknown'
+        df.loc[condition_non_motorist & condition_alcohol_involved, f"TU-{x} NM Other Drugs Suspected "] = "Unknown"
+
+        df.loc[condition_motorist & condition_alcohol_involved, f"TU-{x} Alcohol Suspected"] = "Yes"
+        df.loc[condition_motorist & condition_alcohol_involved, f"TU-{x}  Marijuana Suspected"] = 'Unknown'
+        df.loc[condition_motorist & condition_alcohol_involved, f"TU-{x} Other Drugs Suspected "] = "Unknown"
+
+        # Alcohol / Drugs 
+        # OLD: ALCOHOL/DRUGS 
+        # --> New Alcohol Suspected - "old__alcohol_drugs" 
+        # --> NEW Marijuana Suspected - "old__alcohol_drugs"
+        # --> NEW Other Drugs Suspected - "old__alcohol_drugs"
+        df.loc[condition_non_motorist & condition_alcohol_drugs, f"TU-{x} NM Alcohol Suspected "] = "old__alcohol_drugs"
+        df.loc[condition_non_motorist & condition_alcohol_drugs, f"TU-{x} NM Marijuana Suspected "] = 'old__alcohol_drugs'
+        df.loc[condition_non_motorist & condition_alcohol_drugs, f"TU-{x} NM Other Drugs Suspected "] = "old__alcohol_drugs"
+
+        df.loc[condition_motorist & condition_alcohol_drugs, f"TU-{x} Alcohol Suspected"] = "old__alcohol_drugs"
+        df.loc[condition_motorist & condition_alcohol_drugs, f"TU-{x}  Marijuana Suspected"] = 'old__alcohol_drugs'
+        df.loc[condition_motorist & condition_alcohol_drugs, f"TU-{x} Other Drugs Suspected "] = "old__alcohol_drugs"
+
+        # RX/MEDICATION/DRUGS
+        # OLD: RX/MEDICATION/DRUGS 
+        # --> New Alcohol Suspected - "No" 
+        # --> NEW Marijuana Suspected - "old__rx_medication_drugs"
+        # --> NEW Other Drugs Suspected - "old__rx_medication_drugs"
+        df.loc[condition_non_motorist & condition_alcohol_drugs, f"TU-{x} NM Alcohol Suspected "] = "No"
+        df.loc[condition_non_motorist & condition_alcohol_drugs, f"TU-{x} NM Marijuana Suspected "] = 'old__rx_medication_drugs'
+        df.loc[condition_non_motorist & condition_alcohol_drugs, f"TU-{x} NM Other Drugs Suspected "] = "old__rx_medication_drugs"
+
+        df.loc[condition_motorist & condition_alcohol_drugs, f"TU-{x} Alcohol Suspected"] = "No"
+        df.loc[condition_motorist & condition_alcohol_drugs, f"TU-{x}  Marijuana Suspected"] = 'old__rx_medication_drugs'
+        df.loc[condition_motorist & condition_alcohol_drugs, f"TU-{x} Other Drugs Suspected "] = "old__rx_medication_drugs"
+
+        return df
 
 
 def convert_old_cdot_format_to_new_format(df):
@@ -416,6 +606,12 @@ def convert_old_cdot_format_to_new_format(df):
 
     # Rd_Number, Rd_Section, City_Street
     df = convert_road_number_and_section(df)
+
+    # Determine if entity (traffic unit) 1, 2, 3 are motorists or non-motorists
+    # Define TU-X Type and TU-X NM Type 
+    df = determine_motorists_vs_non_motorists(df)
+    # convert metadata columns based on motorist / non-motorist
+    df = convert_tu_metadata(df)
 
     # Drop no longer needed columns 
     df = df.drop([
