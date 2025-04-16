@@ -181,7 +181,7 @@ map_helmet_x_old_to_new = {
     'HELMET ONLY': 'old__helmet_only',
 }
 
-map_belt_x = {
+map_belt_x_old_to_new = {
     'Y': 'old__yes',
     'N': 'old__no',
 }
@@ -220,7 +220,7 @@ map_movement_x_old_to_new = {
     'UNKNOWN': np.nan,
 }
 
-map_direction_x = {
+map_direction_x_old_to_new = {
     'S': 'South', 
     'N': 'North',
     'W': 'West',
@@ -365,6 +365,20 @@ def convert_tu_metadata(df):
     # add a third vehicle and non-motorist to map VEHICLE_3 to from old format 
 
     for x in ['1', '2', '3']:
+        # handle inconsistent column naming
+        if x == '1':
+            sex_col = f"TU-{x} Sex "
+            safety_helmet_col = f"TU-{x} Safety Helmet"
+            marijuana_suspected_col = f"TU-{x}  Marijuana Suspected"
+        elif x == '2':
+            sex_col = f"TU-{x} Sex" 
+            safety_helmet_col = f"TU-{x}  Safety Helmet"
+            marijuana_suspected_col = f"TU-{x} Marijuana Suspected"
+        else:
+            sex_col = f"TU-{x} Sex"
+            safety_helmet_col = f"TU-{x} Safety Helmet"
+            marijuana_suspected_col = f"TU-{x} Marijuana Suspected"
+
         people_columns = [
             f"TU-{x} Direction",
             f"TU-{x} Movement",
@@ -372,11 +386,8 @@ def convert_tu_metadata(df):
             f"TU-{x} Estimated Speed",
             f"TU-{x} Human Contributing Factor",
             f"TU-{x} Age",
-            f"TU-{x} Sex ",
             f"TU-{x} Safety restraint Use",
-            f"TU-{x}1 Safety Helmet",
             f"TU-{x} Alcohol Suspected",
-            f"TU-{x}  Marijuana Suspected",
             f"TU-{x} Other Drugs Suspected ",
             f"TU-{x} NM Direction",
             f"TU-{x} NM Movement",
@@ -384,20 +395,21 @@ def convert_tu_metadata(df):
             f"TU-{x} NM Sex ",
             f"TU-{x} NM Human Contributing Factor ",
             f"TU-{x} NM Safety Helmet ",
-            f"TU-{x} NM Alcohol Suspected "",
+            f"TU-{x} NM Alcohol Suspected ",
             f"TU-{x} NM Marijuana Suspected ",
             f"TU-{x} NM Other Drugs Suspected ",
-        ] 
+        ] + [sex_col + safety_helmet_col + marijuana_suspected_col]
         for col_name in people_columns:
             df[col_name] = ''
+        
 
         # direction
-        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Direction"] = df[f"DIR_{x}"].map(map_direction_x)
-        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Direction"] = df[f"DIR_{x}"].map(map_direction_x)
+        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Direction"] = df[f"DIR_{x}"].map(map_direction_x_old_to_new)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Direction"] = df[f"DIR_{x}"].map(map_direction_x_old_to_new)
 
         # movement
-        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Movement"] = df[f"VEH_MOVE_{x}"].map(map_movement_x)
-        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Movement"] = df[f"VEH_MOVE_{x}"].map(map_movement_x)
+        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Movement"] = df[f"VEH_MOVE_{x}"].map(map_movement_x_old_to_new)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Movement"] = df[f"VEH_MOVE_{x}"].map(map_movement_x_old_to_new)
 
         # hit and run (only for motorists)
         condition_hit_and_run__true = (df[f"vehicle_{x}_is_nm"] == False) & (df[f"VEHICLE_{x}"] == "HIT & RUN - UNKNOWN")
@@ -415,23 +427,23 @@ def convert_tu_metadata(df):
                                         .astype('int').replace(-1, np.nan)
 
         # human contributing factor
-        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Human Contributing Factor "] = df[f"FACTOR_{x}"].map(map_factor_x)
-        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Human Contributing Factor"] = df[f"FACTOR_{x}"].map(map_factor_x)
+        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Human Contributing Factor "] = df[f"FACTOR_{x}"].map(map_human_factor_x_old_to_new)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Human Contributing Factor"] = df[f"FACTOR_{x}"].map(map_human_factor_x_old_to_new)
 
         # Age
         df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Age "] = df[f"AGE_{x}"]
         df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Age"] = df[f"AGE_{x}"]
 
         # Sex
-        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Sex "] = df[f"SEX_{x}"]
-        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Sex "] = df[f"SEX_{x}"]
+        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Sex"] = df[f"SEX_{x}"]
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, sex_col] = df[f"SEX_{x}"]
 
         # Safety restraint use (only for motorists)
-        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Safety restraint Use"] = df[f"BELT_{x}"].map(map_belt_x)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Safety restraint Use"] = df[f"BELT_{x}"].map(map_belt_x_old_to_new)
 
         # safety helmet
-        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Safety Helmet "] = df[f"CYCPROT_{x}"].map(map_helmet_x)
-        df.loc[df[f"vehicle_{x}_is_nm"] == False, f"TU-{x} Safety Helmet"] = df[f"CYCPROT_{x}"].map(map_helmet_x)
+        df.loc[df[f"vehicle_{x}_is_nm"] == True, f"TU-{x} NM Safety Helmet "] = df[f"CYCPROT_{x}"].map(map_helmet_x_old_to_new)
+        df.loc[df[f"vehicle_{x}_is_nm"] == False, safety_helmet_col] = df[f"CYCPROT_{x}"].map(map_helmet_x_old_to_new)
 
         # Alcohol, Marijuana, Other Drugs
         # *********************************************************************
@@ -452,7 +464,7 @@ def convert_tu_metadata(df):
         df.loc[condition_non_motorist & condition_no_impairment, f"TU-{x} NM Other Drugs Suspected "] = "No"
 
         df.loc[condition_motorist & condition_no_impairment, f"TU-{x} Alcohol Suspected"] = "No"
-        df.loc[condition_motorist & condition_no_impairment, f"TU-{x}  Marijuana Suspected"] = 'Marijuana Not Suspected'
+        df.loc[condition_motorist & condition_no_impairment, marijuana_suspected_col] = 'Marijuana Not Suspected'
         df.loc[condition_motorist & condition_no_impairment, f"TU-{x} Other Drugs Suspected "] = "No"
 
         # Alcohol Involved 
@@ -465,7 +477,7 @@ def convert_tu_metadata(df):
         df.loc[condition_non_motorist & condition_alcohol_involved, f"TU-{x} NM Other Drugs Suspected "] = "Unknown"
 
         df.loc[condition_motorist & condition_alcohol_involved, f"TU-{x} Alcohol Suspected"] = "Yes"
-        df.loc[condition_motorist & condition_alcohol_involved, f"TU-{x}  Marijuana Suspected"] = 'Unknown'
+        df.loc[condition_motorist & condition_alcohol_involved, marijuana_suspected_col] = 'Unknown'
         df.loc[condition_motorist & condition_alcohol_involved, f"TU-{x} Other Drugs Suspected "] = "Unknown"
 
         # Alcohol / Drugs 
@@ -478,7 +490,7 @@ def convert_tu_metadata(df):
         df.loc[condition_non_motorist & condition_alcohol_drugs, f"TU-{x} NM Other Drugs Suspected "] = "old__alcohol_drugs"
 
         df.loc[condition_motorist & condition_alcohol_drugs, f"TU-{x} Alcohol Suspected"] = "old__alcohol_drugs"
-        df.loc[condition_motorist & condition_alcohol_drugs, f"TU-{x}  Marijuana Suspected"] = 'old__alcohol_drugs'
+        df.loc[condition_motorist & condition_alcohol_drugs, marijuana_suspected_col] = 'old__alcohol_drugs'
         df.loc[condition_motorist & condition_alcohol_drugs, f"TU-{x} Other Drugs Suspected "] = "old__alcohol_drugs"
 
         # RX/MEDICATION/DRUGS
@@ -491,10 +503,10 @@ def convert_tu_metadata(df):
         df.loc[condition_non_motorist & condition_alcohol_drugs, f"TU-{x} NM Other Drugs Suspected "] = "old__rx_medication_drugs"
 
         df.loc[condition_motorist & condition_alcohol_drugs, f"TU-{x} Alcohol Suspected"] = "No"
-        df.loc[condition_motorist & condition_alcohol_drugs, f"TU-{x}  Marijuana Suspected"] = 'old__rx_medication_drugs'
+        df.loc[condition_motorist & condition_alcohol_drugs, marijuana_suspected_col] = 'old__rx_medication_drugs'
         df.loc[condition_motorist & condition_alcohol_drugs, f"TU-{x} Other Drugs Suspected "] = "old__rx_medication_drugs"
 
-        return df
+    return df
 
 
 def convert_old_cdot_format_to_new_format(df):
@@ -533,12 +545,18 @@ def convert_old_cdot_format_to_new_format(df):
         'TU-1 NM Location ', 
         'TU-2 NM Location ', 
         'TU-3 NM Location ',
-        'TU-2 NM Action ',
+        'TU-1 NM Action ',
         'TU-2 NM Action ',
         'TU-3 NM Action ',
     ]
     for nc in nan_columns:
         df[nc] = np.nan
+
+    # Determine if entity (traffic unit) 1, 2, 3 are motorists or non-motorists
+    # Define TU-X Type and TU-X NM Type 
+    df = determine_motorists_vs_non_motorists(df)
+    # convert metadata columns based on motorist / non-motorist
+    df = convert_tu_metadata(df)
     
     # Rename Columns 
     df = df.rename(
@@ -607,12 +625,6 @@ def convert_old_cdot_format_to_new_format(df):
     # Rd_Number, Rd_Section, City_Street
     df = convert_road_number_and_section(df)
 
-    # Determine if entity (traffic unit) 1, 2, 3 are motorists or non-motorists
-    # Define TU-X Type and TU-X NM Type 
-    df = determine_motorists_vs_non_motorists(df)
-    # convert metadata columns based on motorist / non-motorist
-    df = convert_tu_metadata(df)
-
     # Drop no longer needed columns 
     df = df.drop([
         'CONTOUR', 
@@ -637,6 +649,42 @@ def convert_old_cdot_format_to_new_format(df):
         'vehicle_1_is_nm', 
         'vehicle_2_is_nm', 
         'vehicle_3_is_nm',
+        'VEHICLE_1',
+        'VEHICLE_2', 
+        'VEHICLE_3', 
+        'LIMIT1', 
+        'LIMIT2', 
+        'LIMIT3', 
+        'REGION', 
+        'RUCODE', 
+        'DIR_1', 
+        'DIR_2', 
+        'DIR_3', 
+        'DRIVER_1', 
+        'DRIVER_2', 
+        'DRIVER_3', 
+        'FACTOR_1', 
+        'FACTOR_2', 
+        'FACTOR_3', 
+        'SPEED_1', 
+        'SPEED_2', 
+        'SPEED_3', 
+        'VEH_MOVE_1', 
+        'VEH_MOVE_2', 
+        'VEH_MOVE_3', 
+        'AGE_1', 
+        'AGE_2', 
+        'AGE_3', 
+        'SEX_1', 
+        'SEX_2', 
+        'SEX_3', 
+        'BELT_1', 
+        'BELT_2', 
+        'BELT_3', 
+        'CYCPROT_1', 
+        'CYCPROT_2', 
+        'CYCPROT_3', 
+        'TIME_int_str', 
     ], axis=1)
 
     return df 
