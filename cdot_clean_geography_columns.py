@@ -75,6 +75,9 @@ def fill_missing_city_values(cdot_pdf):
     # join back in the new city values
     cdot_pdf.loc[cdot_pdf_w_latlong_and_no_city.index, 'City'] = cdot_pdf_w_latlong_and_no_city['City'].str.upper().values
     
+    # some values set to null so reset those to "NONE"
+    cdot_pdf['City'] = cdot_pdf['City'].fillna('NONE')
+    
     return cdot_pdf 
 
 def create_truncated_lat_long(cdot_pdf, decimal):
