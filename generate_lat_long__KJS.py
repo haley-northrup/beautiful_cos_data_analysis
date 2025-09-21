@@ -1,4 +1,25 @@
 #!/usr/bin/env python3
+"""
+This Python code that does the following 
+- read the CDOT CSV files
+- identify the rows with missing lat/long fields
+- call the Google Geocode API with a Location 1/2 combined value, and write out updated rows.  
+
+Obviously this code is not production ready but ran error free and the output passed basic validation checks.  
+The initial shell of code was pulled from some Python/Google Geocode API tutorial.
+
+NOTE: Need to set up a Google Cloud account which requires a credit card number even if you are planning on staying in the free API
+volume range(s), enabling just the Geocoding API, and finding the right API key to add to my script.  
+
+Google Cloud offers a myriad of APIs, options, security settings, etc. 
+Here is a link to the Google Geocoding API for developers overview - https://developers.google.com/maps/documentation/geocoding/overview  
+
+The strengths of the Google Geocode API over say Openstreet Maps is that it will return geocoding data (e.g. lat/long) for known logical intersections. 
+It is my belief that maps.google.com uses the same API when an interactive user types a location into the "Search Google Maps" 
+input box, which means I was able to manually test differing formats of my API input strings easily 
+in advance and also sanity check results on a Google map.
+
+"""
 
 import requests
 import pandas as pd
